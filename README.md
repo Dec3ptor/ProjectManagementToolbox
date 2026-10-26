@@ -96,5 +96,5 @@ stack as [EnviroDB](https://github.com/dec3ptor/envirodb), and the same look.
 
 ### Your data
 
-`Uni.zip` in this repository holds the spreadsheets the app was built around. The site does not read it –
-you import your files yourself, and they stay in your browser.
+The site reads nothing from this repository: you import your own exports in the browser, and they stay
+there. Keep your spreadsheets out of the repository.
