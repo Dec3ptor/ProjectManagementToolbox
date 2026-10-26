@@ -1,0 +1,114 @@
+:root {
+  --pm-page: #f6f7f9;
+  --pm-surface: #ffffff;
+  --pm-grid: #e1e0d9;
+  --pm-muted: #898781;
+}
+[data-mantine-color-scheme='dark'] {
+  --pm-page: #121212;
+  --pm-surface: #1a1a19;
+  --pm-grid: #2c2c2a;
+}
+html,
+body {
+  background: var(--pm-page);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+.pm-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  min-width: 100%;
+}
+.pm-grid th,
+.pm-grid td {
+  border-bottom: 1px solid var(--pm-grid);
+  padding: 5px 8px;
+  white-space: nowrap;
+  background: var(--pm-surface);
+  vertical-align: middle;
+}
+.pm-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-weight: 600;
+  text-align: left;
+  background: var(--mantine-color-gray-0);
+}
+[data-mantine-color-scheme='dark'] .pm-grid thead th {
+  background: var(--mantine-color-dark-6);
+}
+.pm-grid td.num,
+.pm-grid th.num {
+  text-align: right;
+}
+.pm-grid td.wrap {
+  white-space: normal;
+  min-width: 220px;
+  max-width: 420px;
+}
+.pm-grid tr.off td {
+  color: var(--pm-muted);
+}
+.pm-grid tr.off td.money {
+  text-decoration: line-through;
+}
+.pm-grid tr:hover td {
+  background: var(--mantine-color-gray-0);
+}
+[data-mantine-color-scheme='dark'] .pm-grid tr:hover td {
+  background: var(--mantine-color-dark-5);
+}
+/* the monitoring schedule's year grid */
+.pm-cal td.cell {
+  text-align: center;
+  cursor: pointer;
+  min-width: 52px;
+  font-size: 12px;
+  user-select: none;
+}
+.pm-cal td.cell:hover {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+.pm-cal td.todo {
+  background: var(--mantine-color-blue-1);
+  color: var(--mantine-color-blue-9);
+}
+.pm-cal td.doing {
+  background: var(--mantine-color-yellow-2);
+  color: var(--mantine-color-yellow-9);
+}
+.pm-cal td.done {
+  background: var(--mantine-color-teal-2);
+  color: var(--mantine-color-teal-9);
+}
+.pm-cal td.cancelled {
+  background: var(--mantine-color-gray-2);
+  color: var(--mantine-color-gray-7);
+  text-decoration: line-through;
+}
+[data-mantine-color-scheme='dark'] .pm-cal td.todo {
+  background: #1b2f52;
+  color: #bcd3ff;
+}
+[data-mantine-color-scheme='dark'] .pm-cal td.doing {
+  background: #4d3c08;
+  color: #ffe08a;
+}
+[data-mantine-color-scheme='dark'] .pm-cal td.done {
+  background: #0e3d36;
+  color: #a8e8dd;
+}
+[data-mantine-color-scheme='dark'] .pm-cal td.cancelled {
+  background: #2c2c2a;
+  color: #898781;
+}
+.pm-cal td.thismonth,
+.pm-cal th.thismonth {
+  box-shadow: inset 0 -3px 0 var(--mantine-primary-color-filled);
+}
