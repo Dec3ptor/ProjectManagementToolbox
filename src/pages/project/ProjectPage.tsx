@@ -1,11 +1,14 @@
-import { useMemo } from 'react';
-import { Anchor, Badge, Button, Card, Center, Group, Loader, Paper, Progress, ScrollArea, Select, SimpleGrid, Stack, Switch, Tabs, Text, Textarea, TextInput, Title, useMantineColorScheme } from '@mantine/core';
+import { useMemo, useState } from 'react';
+import { ActionIcon, Anchor, Badge, Button, Card, Center, Group, Loader, NumberInput, Paper, Progress, ScrollArea, Select, SimpleGrid, Stack, Switch, Tabs, Text, Textarea, TextInput, Title, useMantineColorScheme } from '@mantine/core';
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { modals } from '@mantine/modals';
-import { IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { db } from '../../db/db';
-import type { Project } from '../../db/types';
+import type { BillingMode, Project, TaskFee } from '../../db/types';
+import { billingMode, previousProgress } from '../../lib/tasks';
 import { useCycles, useLabInvoices, useOverrides, useProject, useSettings, useTransactions } from '../../hooks/useData';
+import { currentBillingMonth } from '../../lib/billing';
+import { addMonths as addM } from '../../lib/dates';
 import { PageHeader, StatTile, HealthBadge, EmptyState, LabStatusBadge } from '../../components/common';
 import { TransactionsTable } from '../../components/TransactionsTable';
 import { EChart, axes } from '../../charts/EChart';
@@ -49,6 +52,7 @@ function ProjectView({ project: p }: { project: Project }) {
             {p.customer ? ` · ${p.customer}` : ''}
             {p.manager ? ` · PM ${p.manager}` : ''}
             {p.billPlanMethod ? ` · ${p.billPlanMethod}` : ''}
+            {billingMode(p) === 'task' ? ' · billed per task' : ''}
             {p.fin ? ` · money as at ${formatDate(p.fin.asOf)}` : ''}
           </>
         }
@@ -64,7 +68,7 @@ function ProjectView({ project: p }: { project: Project }) {
           <Tabs.Tab value="people">People</Tabs.Tab>
           <Tabs.Tab value="tasks">Tasks</Tabs.Tab>
           <Tabs.Tab value="billing">Billing</Tabs.Tab>
-          <Tabs.Tab value="lab">Lab invoices</Tabs.Tab>
+          {settings.features.labInvoices && <Tabs.Tab value="lab">Lab invoices</Tabs.Tab>}
           <Tabs.Tab value="details">Details</Tabs.Tab>
         </Tabs.List>
       </Tabs>
@@ -72,7 +76,7 @@ function ProjectView({ project: p }: { project: Project }) {
         <Route index element={<Overview p={p} txns={txns} overrides={overrides} health={health} />} />
         <Route path="transactions" element={<TransactionsTable txns={txns} overrides={overrides} />} />
         <Route path="people" element={<People txns={txns} overrides={overrides} />} />
-        <Route path="tasks" element={<TasksTab txns={txns} overrides={overrides} />} />
+        <Route path="tasks" element={<TasksTab p={p} txns={txns} overrides={overrides} />} />
         <Route path="billing" element={<BillingTab p={p} />} />
         <Route path="lab" element={<LabTab p={p} />} />
         <Route path="details" element={<Details p={p} />} />
@@ -206,8 +210,61 @@ function TotalsRow({ label, txns, overrides }: Props & { label: string }) {
   );
 }
 
-function TasksTab({ txns, overrides }: Props) {
+function TasksTab({ p, txns, overrides }: Props & { p: Project }) {
   const tasks = useMemo(() => byTask(txns, overrides), [txns, overrides]);
+  const cycles = useCycles();
+  const perTask = billingMode(p) === 'task';
+  // claimed to date: as at the month after the latest billing month (so this month's entries count)
+  const claimed = useMemo(() => previousProgress(p.id, addM(currentBillingMonth(), 2), cycles), [p.id, cycles]);
+  const fees = new Map((p.taskFees ?? []).map((f) => [f.taskNumber, f.fee]));
+  if (perTask)
+    return (
+      <Stack gap="sm">
+        <Text size="sm" c="dimmed">
+          Billed per task: each task’s quoted fee against the time and costs booked to it. Fees are set in Details; % complete is claimed each month on Monthly billing.
+        </Text>
+        <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+          <ScrollArea type="auto">
+            <table className="pm-grid">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th className="num">Quoted fee</th>
+                  <th className="num">Claimed</th>
+                  <th className="num">Claimed to date</th>
+                  <th className="num">Hours</th>
+                  <th className="num">Cost</th>
+                  <th className="num">Cost vs fee</th>
+                  <th className="num">Fee left</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...new Set([...fees.keys(), ...tasks.map((g) => g.key)])].map((n) => {
+                  const g = tasks.find((t) => t.key === n);
+                  const fee = fees.get(n) ?? 0;
+                  const pc = claimed[n] ?? 0;
+                  const over = fee > 0 && (g?.totals.cost ?? 0) > fee;
+                  return (
+                    <tr key={n}>
+                      <td>{g?.label ?? `${(p.taskFees ?? []).find((f) => f.taskNumber === n)?.taskName ?? n} (${n})`}</td>
+                      <td className="num">{fee ? money(fee) : '–'}</td>
+                      <td className="num">{pct(pc, false)}</td>
+                      <td className="num">{money((fee * pc) / 100)}</td>
+                      <td className="num">{num(g?.totals.hours ?? 0, 2)}</td>
+                      <td className="num">{money(g?.totals.cost ?? 0, true)}</td>
+                      <td className="num" style={{ color: over ? 'var(--mantine-color-red-7)' : undefined }}>
+                        {fee ? pct((g?.totals.cost ?? 0) / fee) : '–'}
+                      </td>
+                      <td className="num">{fee ? money(fee - (fee * pc) / 100) : '–'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </ScrollArea>
+        </Paper>
+      </Stack>
+    );
   return (
     <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
       <ScrollArea type="auto">
@@ -363,6 +420,23 @@ function Details({ p }: { p: Project }) {
         {field('Consents', 'consents')}
         {field('Folder', 'folder', 'A path to the project folder')}
       </SimpleGrid>
+      <Card padding="md">
+        <Title order={6} mb={4}>
+          How it is billed
+        </Title>
+        <Select
+          label="Billing"
+          description="Time & costs: people’s hours and expenses line by line. Per task: a % of each task’s quoted fee each month, not individual time."
+          value={billingMode(p)}
+          onChange={(v) => v && save({ billingMode: v as BillingMode })}
+          data={[
+            { value: 'time', label: 'Time & costs (hours and expenses)' },
+            { value: 'task', label: 'Per task (% of the quoted fee)' },
+          ]}
+          maw={420}
+        />
+        {billingMode(p) === 'task' && <TaskFees p={p} />}
+      </Card>
       <TextInput label="Also known as (other codes, comma-separated)" defaultValue={p.aliases.join(', ')} onBlur={(e) => save({ aliases: e.currentTarget.value.split(',').map((s) => s.trim()).filter(Boolean) })} description="Codes that mean this project in the monitoring sheet and lab tracker, e.g. 2-34646.00" />
       <Textarea label="Notes" autosize minRows={3} defaultValue={p.notes ?? ''} onBlur={(e) => e.currentTarget.value !== (p.notes ?? '') && save({ notes: e.currentTarget.value || undefined })} />
       {p.fin && (
@@ -408,5 +482,105 @@ function Details({ p }: { p: Project }) {
         </Button>
       </Group>
     </Stack>
+  );
+}
+
+/** The quoted fee for each task of a per-task project. */
+function TaskFees({ p }: { p: Project }) {
+  const txns = useTransactions(p.id);
+  const fees = p.taskFees ?? [];
+  const known = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of txns) if (!m.has(t.taskNumber)) m.set(t.taskNumber, t.taskName);
+    return m;
+  }, [txns]);
+  const rows: TaskFee[] = [...fees, ...[...known.entries()].filter(([n]) => !fees.some((f) => f.taskNumber === n)).map(([taskNumber, taskName]) => ({ taskNumber, taskName, fee: 0 }))];
+  const saveFees = (next: TaskFee[]) => db.projects.update(p.id, { taskFees: next.filter((f) => f.taskNumber.trim()), updatedAt: nowIso() });
+  const setFee = (taskNumber: string, taskName: string, fee: number) => {
+    const next = rows.map((r) => (r.taskNumber === taskNumber ? { ...r, taskName, fee } : r));
+    if (!next.some((r) => r.taskNumber === taskNumber)) next.push({ taskNumber, taskName, fee });
+    return saveFees(next);
+  };
+  const total = rows.reduce((a, r) => a + (r.fee || 0), 0);
+  return (
+    <Stack gap="xs" mt="sm">
+      <Group justify="space-between">
+        <Text size="sm" fw={600}>
+          Quoted fee per task
+        </Text>
+        <Text size="sm" className="tabular">
+          Total quoted <b>{money(total)}</b>
+          {p.fin?.budgetRevenue ? ` · budget revenue ${money(p.fin.budgetRevenue)}` : ''}
+        </Text>
+      </Group>
+      <Text size="xs" c="dimmed">
+        Tasks with time booked to them are listed already; add any others. The fee is what the client is quoted for that task (excl GST).
+      </Text>
+      <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+        <table className="pm-grid">
+          <thead>
+            <tr>
+              <th>Task #</th>
+              <th>Task</th>
+              <th className="num">Quoted fee</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.taskNumber}>
+                <td>{r.taskNumber}</td>
+                <td>
+                  <TextInput size="xs" defaultValue={r.taskName} onBlur={(e) => e.currentTarget.value !== r.taskName && setFee(r.taskNumber, e.currentTarget.value, r.fee)} />
+                </td>
+                <td className="num">
+                  <NumberInput size="xs" value={r.fee || ''} prefix="$" thousandSeparator min={0} onChange={(v) => setFee(r.taskNumber, r.taskName, typeof v === 'number' ? v : 0)} w={140} style={{ marginLeft: 'auto' }} />
+                </td>
+                <td>
+                  {!known.has(r.taskNumber) && (
+                    <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => saveFees(rows.filter((x) => x.taskNumber !== r.taskNumber))} aria-label="Remove">
+                      <IconTrash size={13} />
+                    </ActionIcon>
+                  )}
+                </td>
+              </tr>
+            ))}
+            <NewTaskRow onAdd={(n, name, fee) => setFee(n, name, fee)} existing={rows.map((r) => r.taskNumber)} />
+          </tbody>
+        </table>
+      </Paper>
+    </Stack>
+  );
+}
+
+function NewTaskRow({ onAdd, existing }: { onAdd: (taskNumber: string, taskName: string, fee: number) => void; existing: string[] }) {
+  const [n, setN] = useState('');
+  const [name, setName] = useState('');
+  const [fee, setFee] = useState<number | ''>('');
+  const ok = n.trim() && !existing.includes(n.trim());
+  const add = () => {
+    if (!ok) return;
+    onAdd(n.trim(), name.trim() || n.trim(), typeof fee === 'number' ? fee : 0);
+    setN('');
+    setName('');
+    setFee('');
+  };
+  return (
+    <tr>
+      <td>
+        <TextInput size="xs" placeholder="e.g. 003" value={n} onChange={(e) => setN(e.currentTarget.value)} w={90} />
+      </td>
+      <td>
+        <TextInput size="xs" placeholder="Task name" value={name} onChange={(e) => setName(e.currentTarget.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+      </td>
+      <td className="num">
+        <NumberInput size="xs" value={fee} prefix="$" thousandSeparator min={0} onChange={(v) => setFee(typeof v === 'number' ? v : '')} w={140} style={{ marginLeft: 'auto' }} />
+      </td>
+      <td>
+        <ActionIcon size="sm" variant="light" onClick={add} disabled={!ok} aria-label="Add task">
+          <IconPlus size={13} />
+        </ActionIcon>
+      </td>
+    </tr>
   );
 }

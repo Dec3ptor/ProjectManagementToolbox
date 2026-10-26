@@ -23,8 +23,8 @@ export function Shell() {
     { to: '/projects', label: 'Projects', icon: IconFolders, active: path.startsWith('/projects') },
     { to: '/billing', label: 'Monthly billing', icon: IconReceipt2, active: path.startsWith('/billing') },
     { to: '/people', label: 'People & time', icon: IconUsers, active: path.startsWith('/people') },
-    { to: '/lab-invoices', label: 'Lab invoices', icon: IconFileInvoice, active: path.startsWith('/lab-invoices') },
-    { to: '/calendar', label: 'Monitoring calendar', icon: IconCalendarMonth, active: path.startsWith('/calendar') },
+    ...(settings.features.labInvoices ? [{ to: '/lab-invoices', label: 'Lab invoices', icon: IconFileInvoice, active: path.startsWith('/lab-invoices') }] : []),
+    ...(settings.features.calendar ? [{ to: '/calendar', label: 'Monitoring calendar', icon: IconCalendarMonth, active: path.startsWith('/calendar') }] : []),
     { to: '/import', label: 'Import data', icon: IconUpload, active: path.startsWith('/import') },
   ];
   const mine = projects.filter((p) => p.mine && p.status === 'active').sort((a, b) => a.name.localeCompare(b.name));
@@ -44,7 +44,7 @@ export function Shell() {
               </Text>
             </Link>
             <Text c="dimmed" size="sm" visibleFrom="md">
-              Projects · billing · lab invoices
+              Projects · time · billing
             </Text>
           </Group>
           <Group gap="xs" wrap="nowrap">

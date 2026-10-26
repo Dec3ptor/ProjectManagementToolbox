@@ -2,6 +2,16 @@
 
 export type ProjectStatus = 'active' | 'on-hold' | 'closed';
 
+/** How a project is billed: people's time and costs line by line, or a % of each task's quoted fee. */
+export type BillingMode = 'time' | 'task';
+
+/** A task's quoted fee, for projects billed per task. */
+export interface TaskFee {
+  taskNumber: string;
+  taskName: string;
+  fee: number;
+}
+
 /** The project's money, as the Power BI export reports it (inception to date). */
 export interface ProjectFinancials {
   /** The date of the export it came from (YYYY-MM-DD). */
@@ -37,6 +47,9 @@ export interface Project {
   mine: boolean;
   billPlanMethod?: string;
   contractNumber?: string;
+  /** Unset: per task when the bill plan is percent-complete or amount-based, else time. */
+  billingMode?: BillingMode;
+  taskFees?: TaskFee[];
   fin?: ProjectFinancials;
   /** Details kept by hand (or from the monitoring workbook). */
   jobCode?: string;
@@ -137,6 +150,8 @@ export interface BillingCycle {
   steps: Partial<Record<BillingStep, string>>;
   /** Nothing to bill this month. */
   skipped?: boolean;
+  /** Projects billed per task: the cumulative % complete claimed for each task number, as at this month. */
+  taskProgress?: Record<string, number>;
   invoiceAmount?: number;
   invoiceNumber?: string;
   notes?: string;
@@ -211,6 +226,8 @@ export interface Settings {
   browserNotifications: boolean;
   /** The e-mail that lab invoices are sent to for payment. */
   apEmail: string;
+  /** Parts of the app that can be switched off. */
+  features: { calendar: boolean; labInvoices: boolean };
 }
 
 export interface MetaRecord {
