@@ -1,7 +1,7 @@
 {
   "name": "pm-toolbox",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Project management toolbox: projects, time and costs, billability, monthly billing, lab invoices and alerts – in your browser (GitHub Pages).",
   "type": "module",
   "scripts": {

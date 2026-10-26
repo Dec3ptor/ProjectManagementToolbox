@@ -46,11 +46,13 @@ export const DEFAULT_SETTINGS: Settings = {
   staleImportDays: 14,
   browserNotifications: false,
   apEmail: 'NZ.AP@wsp.com',
+  features: { calendar: false, labInvoices: false },
 };
 
 export async function getSettings(): Promise<Settings> {
   const row = await db.meta.get('settings');
-  return { ...DEFAULT_SETTINGS, ...((row?.value as Partial<Settings>) ?? {}) };
+  const saved = (row?.value as Partial<Settings>) ?? {};
+  return { ...DEFAULT_SETTINGS, ...saved, features: { ...DEFAULT_SETTINGS.features, ...(saved.features ?? {}) } };
 }
 
 export async function saveSettings(patch: Partial<Settings>): Promise<Settings> {

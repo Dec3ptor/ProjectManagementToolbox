@@ -9,7 +9,9 @@ import { PageHeader, StatTile, HealthBadge } from '../components/common';
 import { AlertsList } from '../components/AlertsList';
 import { billingDueDate, currentBillingMonth, monthBilling } from '../lib/billing';
 import { formatDate, formatMonth, nowIso, toDateStr } from '../lib/dates';
-import { isFixedFee, money, plural, shortName, uid } from '../lib/format';
+import { money, plural, shortName, uid } from '../lib/format';
+import { billingMode } from '../lib/tasks';
+import { IconAlertTriangle, IconChecklist } from '@tabler/icons-react';
 import { projectHealth, HEALTH_META } from '../lib/health';
 import { scheduledItems } from '../lib/schedule';
 import { MONTHS_LONG } from '../lib/dates';
@@ -141,7 +143,7 @@ export function DashboardPage() {
     );
   if (!projects.length && !rows.length && !labInvoices.length) return <Welcome />;
 
-  const unbilled = health.filter((x) => !isFixedFee(x.p.billPlanMethod)).reduce((a, x) => a + x.h.totals.unbilledEffort, 0);
+  const unbilled = health.filter((x) => billingMode(x.p) === 'time').reduce((a, x) => a + x.h.totals.unbilledEffort, 0);
   const billingDone = billing.filter((b) => b.done).length;
   const labWaiting = labInvoices.filter((i) => i.status === 'received' || i.status === 'query').length;
   const urgent = alerts.filter((a) => a.severity !== 'info').length;
@@ -152,8 +154,16 @@ export function DashboardPage() {
       <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
         <StatTile label={`${formatMonth(month)} billing`} value={`${billingDone} / ${billing.length}`} sub={`projects done · due ${formatDate(billingDueDate(month, settings))}`} color={billingDone === billing.length ? 'teal' : undefined} icon={<IconReceipt2 size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = `#/billing/${month}`)} />
         <StatTile label="Billable, not yet invoiced" value={money(unbilled)} sub="on your time & materials projects (as it stands here)" icon={<IconReceipt2 size={22} color="var(--pm-muted)" />} />
-        <StatTile label="Lab invoices waiting" value={labWaiting} sub="received, not yet sent to AP (or queried)" color={labWaiting ? 'orange' : 'teal'} icon={<IconFileInvoice size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = '#/lab-invoices')} />
-        <StatTile label={`Monitoring in ${MONTHS_LONG[m - 1]}`} value={`${thisMonth.filter((i) => i.status === 'done').length} / ${thisMonth.length}`} sub="rounds done this month" icon={<IconCalendarMonth size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = `#/calendar/${y}`)} />
+        {settings.features.labInvoices ? (
+          <StatTile label="Lab invoices waiting" value={labWaiting} sub="received, not yet sent to AP (or queried)" color={labWaiting ? 'orange' : 'teal'} icon={<IconFileInvoice size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = '#/lab-invoices')} />
+        ) : (
+          <StatTile label="Projects to watch" value={health.filter((x) => x.h.level === 'critical' || x.h.level === 'serious' || x.h.level === 'warning').length} sub={`of ${mine.length} over budget, at risk or to watch`} color={health.some((x) => x.h.level === 'critical') ? 'red' : undefined} icon={<IconAlertTriangle size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = '#/projects')} />
+        )}
+        {settings.features.calendar ? (
+          <StatTile label={`Monitoring in ${MONTHS_LONG[m - 1]}`} value={`${thisMonth.filter((i) => i.status === 'done').length} / ${thisMonth.length}`} sub="rounds done this month" icon={<IconCalendarMonth size={22} color="var(--pm-muted)" />} onClick={() => (location.hash = `#/calendar/${y}`)} />
+        ) : (
+          <StatTile label="To-dos open" value={todos.filter((t) => !t.done).length} sub={todos.some((t) => !t.done && t.due && t.due < today) ? 'some are overdue' : 'nothing overdue'} icon={<IconChecklist size={22} color="var(--pm-muted)" />} />
+        )}
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
@@ -180,8 +190,8 @@ export function DashboardPage() {
                   <Text size="sm" style={{ flex: 1, minWidth: 0 }} truncate component={Link} to={projectPath(b.project.id)} c="inherit" td="none">
                     {shortName(b.project.name)}
                   </Text>
-                  <Text size="xs" c="dimmed" className="tabular" w={90} ta="right" title={b.fixedFee ? 'Fixed fee: this month’s work' : 'Billable, not yet invoiced'}>
-                    {money(b.fixedFee ? b.thisMonthEffort : b.thisMonthEffort + b.olderEffort)}
+                  <Text size="xs" c="dimmed" className="tabular" w={90} ta="right" title={b.mode === 'task' ? 'This month’s claim (% complete per task)' : 'Billable, not yet invoiced'}>
+                    {money(b.toInvoice)}
                   </Text>
                   <Tooltip label={b.done ? 'Done' : `${Math.round(b.progress * 4)} of 4 steps`}>
                     <Progress value={b.progress * 100} color={b.done ? 'teal' : 'indigo'} w={80} size="sm" />
@@ -238,7 +248,7 @@ export function DashboardPage() {
                   Margin <b>{h.margin !== undefined ? `${Math.round(h.margin * 100)}%` : '–'}</b>
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {isFixedFee(p.billPlanMethod) ? <>Fixed fee</> : <>Unbilled <b>{money(h.totals.unbilledEffort)}</b></>}
+                  {billingMode(p) === 'task' ? <>Billed per task</> : <>Unbilled <b>{money(h.totals.unbilledEffort)}</b></>}
                 </Text>
                 <Text size="xs" c="dimmed">
                   Hours <b>{Math.round(h.totals.hours)}</b>

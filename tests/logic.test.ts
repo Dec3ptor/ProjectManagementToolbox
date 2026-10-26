@@ -93,7 +93,7 @@ describe('monthly billing', () => {
 
 describe('alerts', () => {
   const today = '2026-10-26';
-  const base = { projects: [project({ id: 'P', name: 'Landfill' })], txns: [txn({ id: '1', date: '2026-09-10', effort: 350 })], overrides: overrideMap([]), cycles: [], labInvoices: [], rows: [], marks: [], todos: [], imports: [], settings: DEFAULT_SETTINGS, today };
+  const base = { projects: [project({ id: 'P', name: 'Landfill' })], txns: [txn({ id: '1', date: '2026-09-10', effort: 350 })], overrides: overrideMap([]), cycles: [], labInvoices: [], rows: [], marks: [], todos: [], imports: [], settings: { ...DEFAULT_SETTINGS, features: { calendar: true, labInvoices: true } }, today };
 
   it('flags overdue billing, lab invoices waiting and a project over budget', () => {
     const alerts = buildAlerts({

@@ -1,9 +1,9 @@
 // The monthly billing cycle: which month is being billed, what each project has to bill, and how far along it is.
 
-import type { BillingCycle, BillingStep, Project, Settings, Transaction } from '../db/types';
+import type { BillingCycle, BillingMode, BillingStep, Project, Settings, Transaction } from '../db/types';
 import { isBillable, isUnbilled, type OverrideMap } from './billability';
 import { addMonths, monthEnd, monthOf, todayStr } from './dates';
-import { isFixedFee } from './format';
+import { billingMode, claimTotal, taskClaims, type TaskClaim } from './tasks';
 
 export const BILLING_STEPS: Array<{ key: BillingStep; label: string; hint: string }> = [
   { key: 'reviewed', label: 'Time reviewed', hint: 'Looked through everyone’s hours and costs for the month' },
@@ -47,8 +47,11 @@ export interface ProjectBilling {
   nonBillableHours: number;
   done: boolean;
   progress: number;
-  /** Billed by % complete or a fixed amount, not line by line. */
-  fixedFee: boolean;
+  mode: BillingMode;
+  /** Per-task projects: each task's fee and this month's claim. */
+  claims: TaskClaim[];
+  /** What there is to invoice this month: the task claims, or the billable lines not yet invoiced. */
+  toInvoice: number;
 }
 
 /** What each of my projects has to bill for a month. */
@@ -79,22 +82,28 @@ export function monthBilling(month: string, projects: Project[], txns: Transacti
       }
       const cycle = cycleMap.get(p.id);
       const sum = (l: Transaction[], f: (t: Transaction) => number) => l.reduce((a, t) => a + (f(t) || 0), 0);
+      const mode = billingMode(p);
+      const claims = mode === 'task' ? taskClaims(p, month, cycles, list) : [];
+      const thisMonthEffort = sum(thisMonth, (t) => t.effort);
+      const olderEffort = sum(older, (t) => t.effort);
       return {
         project: p,
         cycle,
         thisMonth,
         older,
-        thisMonthEffort: sum(thisMonth, (t) => t.effort),
-        olderEffort: sum(older, (t) => t.effort),
+        thisMonthEffort,
+        olderEffort,
         thisMonthHours: sum(thisMonth.filter((t) => t.uom === 'HOURS'), (t) => t.quantity),
         nonBillable,
         nonBillableHours: sum(nonBillable.filter((t) => t.uom === 'HOURS'), (t) => t.quantity),
         done: cycleDone(cycle),
         progress: stepsDone(cycle) / BILLING_STEPS.length,
-        fixedFee: isFixedFee(p.billPlanMethod),
+        mode,
+        claims,
+        toInvoice: mode === 'task' ? claimTotal(claims) : thisMonthEffort + olderEffort,
       };
     })
-    .sort((a, b) => Number(a.done) - Number(b.done) || b.thisMonthEffort + b.olderEffort - (a.thisMonthEffort + a.olderEffort));
+    .sort((a, b) => Number(a.done) - Number(b.done) || b.toInvoice - a.toInvoice);
 }
 
 /** The months with anything to show: from the earliest transaction to the current billing month. */

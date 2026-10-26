@@ -88,6 +88,18 @@ export function SettingsPage() {
       </Card>
       <Card>
         <Text fw={600} mb="xs">
+          Parts of the app
+        </Text>
+        <Text size="sm" c="dimmed" mb="sm">
+          Switch off what you don’t use; it leaves the menu, the dashboard and the alerts. Anything imported stays and comes back when switched on.
+        </Text>
+        <Stack gap="xs">
+          <Switch label="Monitoring calendar" description="The monitoring schedule grid, with rounds and annual reports in the alerts" checked={s.features.calendar} onChange={(e) => saveSettings({ features: { ...s.features, calendar: e.currentTarget.checked } })} />
+          <Switch label="Lab invoices" description="The lab invoice → AP tracker, with invoices waiting in the alerts" checked={s.features.labInvoices} onChange={(e) => saveSettings({ features: { ...s.features, labInvoices: e.currentTarget.checked } })} />
+        </Stack>
+      </Card>
+      <Card>
+        <Text fw={600} mb="xs">
           Backup
         </Text>
         <Text size="sm" c="dimmed" mb="sm">

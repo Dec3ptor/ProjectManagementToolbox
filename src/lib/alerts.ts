@@ -61,11 +61,16 @@ export function buildAlerts(input: AlertInput): Alert[] {
   const late = today > due;
   for (const b of monthBilling(month, input.projects, input.txns, input.overrides, input.cycles)) {
     if (b.done) continue;
-    const amount = b.thisMonthEffort + b.olderEffort;
-    if (amount <= 0 && !b.nonBillable.length && !b.fixedFee) continue;
-    if (b.fixedFee && b.thisMonthEffort <= 0 && !b.nonBillable.length) continue;
+    const perTask = b.mode === 'task';
+    const worked = b.thisMonth.length + b.nonBillable.length > 0;
+    if (!perTask && b.toInvoice <= 0 && !b.nonBillable.length) continue;
+    if (perTask && !worked && !b.cycle?.taskProgress) continue;
     const started = (b.cycle && Object.keys(b.cycle.steps).length) || 0;
-    const what = b.fixedFee ? `${money(b.thisMonthEffort)} of work this month – fixed fee, invoice by % complete` : `${money(amount)} billable not yet invoiced${b.olderEffort > 0 ? ` (${money(b.olderEffort)} from earlier months)` : ''}`;
+    const what = perTask
+      ? b.cycle?.taskProgress
+        ? `${money(b.toInvoice)} to claim this month (% complete per task)`
+        : `enter each task’s % complete to work out the claim${b.thisMonthEffort > 0 ? ` · ${money(b.thisMonthEffort)} of work this month` : ''}`
+      : `${money(b.toInvoice)} billable not yet invoiced${b.olderEffort > 0 ? ` (${money(b.olderEffort)} from earlier months)` : ''}`;
     out.push({
       id: `billing|${month}|${b.project.id}`,
       kind: 'billing',
@@ -79,7 +84,7 @@ export function buildAlerts(input: AlertInput): Alert[] {
   }
 
   // ---- lab invoices waiting to go to AP, or still to arrive
-  for (const inv of input.labInvoices) {
+  for (const inv of s.features.labInvoices ? input.labInvoices : []) {
     if (inv.status === 'received') {
       const since = inv.invoiceDate ? daysBetween(inv.invoiceDate, today) : 0;
       out.push({
@@ -132,7 +137,7 @@ export function buildAlerts(input: AlertInput): Alert[] {
   const [y, m] = today.split('-').map(Number);
   const nextMonth = addMonths(monthOf(today), 1);
   const [ny, nm] = nextMonth.split('-').map(Number);
-  const items = [...scheduledItems(input.rows, input.marks, y).filter((i) => i.month === m), ...(ny === y ? scheduledItems(input.rows, input.marks, y) : scheduledItems(input.rows, input.marks, ny)).filter((i) => i.month === nm)];
+  const items = !s.features.calendar ? [] : [...scheduledItems(input.rows, input.marks, y).filter((i) => i.month === m), ...(ny === y ? scheduledItems(input.rows, input.marks, y) : scheduledItems(input.rows, input.marks, ny)).filter((i) => i.month === nm)];
   const seen = new Set<string>();
   for (const it of items) {
     const key = `${it.row.id}|${it.year}-${it.month}`;
@@ -151,7 +156,7 @@ export function buildAlerts(input: AlertInput): Alert[] {
     });
   }
   const reportRows = new Set<string>();
-  for (const row of input.rows) {
+  for (const row of s.features.calendar ? input.rows : []) {
     const rm = monthFromText(row.annualReportDue);
     if (!rm || reportRows.has(row.name + rm)) continue;
     reportRows.add(row.name + rm);

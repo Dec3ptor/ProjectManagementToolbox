@@ -10,7 +10,15 @@ import { todayStr } from '../lib/dates';
 
 const EMPTY: never[] = [];
 
-export const useSettings = (): Settings => useLiveQuery(async () => ({ ...DEFAULT_SETTINGS, ...(((await db.meta.get('settings'))?.value as Partial<Settings>) ?? {}) }), [], DEFAULT_SETTINGS);
+export const useSettings = (): Settings =>
+  useLiveQuery(
+    async () => {
+      const saved = ((await db.meta.get('settings'))?.value as Partial<Settings>) ?? {};
+      return { ...DEFAULT_SETTINGS, ...saved, features: { ...DEFAULT_SETTINGS.features, ...(saved.features ?? {}) } };
+    },
+    [],
+    DEFAULT_SETTINGS,
+  );
 export const useProjects = (): Project[] | undefined => useLiveQuery(() => db.projects.toArray(), []);
 export const useProject = (id: string | undefined): Project | undefined | null => useLiveQuery(async () => (id ? (await db.projects.get(id)) ?? null : null), [id]);
 export const useTransactions = (projectId?: string): Transaction[] => useLiveQuery(() => (projectId ? db.transactions.where('projectId').equals(projectId).toArray() : db.transactions.toArray()), [projectId], EMPTY as Transaction[]);

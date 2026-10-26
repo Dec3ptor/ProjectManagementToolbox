@@ -31,14 +31,18 @@ It replaces the Project Health Tracker and monitoring spreadsheets with one plac
 - **People & time** – who has put hours into your projects (billable and non-billable, cost, bill amount,
   unbilled) for this month, last month, the last three months or all time, and the same per project.
 - **Monthly billing** – at the start of each month, every project of yours with what there is to bill
-  (this month's lines plus anything older still unbilled; fixed-fee projects show the month's work and
-  are invoiced by % complete) and a four-step checklist: time reviewed → non-billables marked → sent
-  for invoicing → invoiced. Each step is dated when you tick it, the invoice amount and number are kept,
-  and the month exports to Excel. Earlier months stay as a record of what you did.
-- **Lab invoices** – the Lab Invoice → AP tracker: log an invoice when it arrives (project, PO, lab, invoice
+  and a four-step checklist: time reviewed → non-billables marked → sent for invoicing → invoiced. Each
+  step is dated when you tick it, the invoice amount and number are kept, and the month exports to Excel.
+  Earlier months stay as a record of what you did. A project is billed one of two ways (its Details tab):
+  - **Time & costs** – this month's billable lines plus anything older still unbilled.
+  - **Per task** – each task has a quoted fee; each month you enter where the task stands (% complete,
+    cumulative) and the claim is the fee times the percentage added since the last claim. Cost booked
+    to the task is shown against its fee. Projects the finance system bills by percent complete or
+    amount are per task unless you choose otherwise.
+- **Lab invoices** (off by default; switch on in Settings) – the Lab Invoice → AP tracker: log an invoice when it arrives (project, PO, lab, invoice
   number, date, amount), *Send to AP* copies the e-mail to accounts payable and marks it sent, and anything
   received but not sent after 14 days (your setting) is flagged. Missing POs are pointed out.
-- **Monitoring calendar** – the schedule grid from the spreadsheet, a row per site and a cell per month with
+- **Monitoring calendar** (off by default; switch on in Settings) – the schedule grid from the spreadsheet, a row per site and a cell per month with
   the same marks (● ▲ # R …). Click a cell to move it along: to do → results to analyse → done →
   cancelled. Marks are kept per year, and survive re-importing the schedule.
 - **Dashboard and alerts** – the month's billing progress, billable work not yet invoiced, lab invoices
@@ -88,6 +92,7 @@ stack as [EnviroDB](https://github.com/dec3ptor/envirodb), and the same look.
 | `src/importers/apply.ts` | writes an import into the database, matching codes to projects |
 | `src/lib/billability.ts` | billable or not, and the sums per person / task / month |
 | `src/lib/billing.ts` | the monthly billing cycle |
+| `src/lib/tasks.ts` | per-task billing: quoted fees and % complete claims |
 | `src/lib/alerts.ts` | what needs attention |
 | `src/lib/health.ts` | how a project is doing |
 | `src/lib/schedule.ts` | the monitoring calendar's cells and marks |
