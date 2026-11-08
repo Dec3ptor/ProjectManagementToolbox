@@ -28,6 +28,12 @@ It replaces the Project Health Tracker and monitoring spreadsheets with one plac
   remembered by transaction number across imports, and the ones that differ from the export are listed
   as the changes to make in the finance system (copy the list with one click). The workbook's
   *Billability Overrides* sheet is taken on too.
+- **Ask AI** – a button on each project writes it out as Markdown (money, health, hours by person, task
+  and month, the billing record, billability changes and, if you like, every transaction with its
+  comments) to copy or download and paste into ChatGPT, Claude, Copilot or whichever assistant you use,
+  with a short brief on how to help and questions worth asking. Options: only the last 3, 6 or 12 months,
+  leave the lines out, anonymise people (initials, numbered suppliers). Nothing is sent anywhere from
+  the app itself.
 - **People & time** – who has put hours into your projects (billable and non-billable, cost, bill amount,
   unbilled) for this month, last month, the last three months or all time, and the same per project.
 - **Monthly billing** – at the start of each month, every project of yours with what there is to bill
@@ -93,6 +99,7 @@ stack as [EnviroDB](https://github.com/dec3ptor/envirodb), and the same look.
 | `src/lib/billability.ts` | billable or not, and the sums per person / task / month |
 | `src/lib/billing.ts` | the monthly billing cycle |
 | `src/lib/tasks.ts` | per-task billing: quoted fees and % complete claims |
+| `src/lib/aiPack.ts` | the project written out for an AI assistant |
 | `src/lib/alerts.ts` | what needs attention |
 | `src/lib/health.ts` | how a project is doing |
 | `src/lib/schedule.ts` | the monitoring calendar's cells and marks |
