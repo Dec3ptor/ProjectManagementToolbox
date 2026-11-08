@@ -11,6 +11,7 @@ import { currentBillingMonth } from '../../lib/billing';
 import { addMonths as addM } from '../../lib/dates';
 import { PageHeader, StatTile, HealthBadge, EmptyState, LabStatusBadge } from '../../components/common';
 import { TransactionsTable } from '../../components/TransactionsTable';
+import { AskAiButton } from '../../components/AskAi';
 import { EChart, axes } from '../../charts/EChart';
 import { byMonth, byPerson, byTask, pendingChanges, totals } from '../../lib/billability';
 import { projectHealth } from '../../lib/health';
@@ -57,7 +58,12 @@ function ProjectView({ project: p }: { project: Project }) {
           </>
         }
         badge={<HealthBadge level={health.level} size="md" />}
-        actions={<Switch label="Mine" checked={p.mine} onChange={(e) => db.projects.update(p.id, { mine: e.currentTarget.checked, updatedAt: nowIso() })} />}
+        actions={
+          <Group gap="sm">
+            <AskAiButton project={p} />
+            <Switch label="Mine" checked={p.mine} onChange={(e) => db.projects.update(p.id, { mine: e.currentTarget.checked, updatedAt: nowIso() })} />
+          </Group>
+        }
       />
       <Tabs value={tab} onChange={(v) => navigate(v === 'overview' ? base : `${base}/${v}`)}>
         <Tabs.List style={{ flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none' }}>
